@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--/*
+ * @support
+ * http://www.opensourcetechnologies.com/contactus.html
+ * sales@opensourcetechnologies.com
+* */-->
+<modification>
+    <name>Add option on Product with Ajax</name>
+    <version>1.0</version>
+    <code>Add option on Product with Ajax</code>
+    <author>OST</author>
+    <link>http://www.opensourcetechnologies.com</link>
+<file path="catalog/controller/product/product.php">
+      <operation>
+        <search index="1" position="before"><![CDATA[$this->load->model('catalog/review');]]></search>
+        <add><![CDATA[$data['addoption_status'] = $this->config->get('addoption_status');]]></add>
+      </operation>	
+</file>
+
+<file path="catalog/controller/common/footer.php">
+      <operation>
+        <search position="before"><![CDATA[$this->load->model('catalog/information');]]></search>
+        <add><![CDATA[$data['addoption_status'] = $this->config->get('addoption_status');]]></add>
+      </operation>	
+</file>
+
+<file path="catalog/view/theme/*/template/common/footer.tpl">     
+      <operation>
+        <search position="before"><![CDATA[<footer>]]></search>
+        <add><![CDATA[<?php if($addoption_status==1) { ?>
+        <script type="text/javascript"><!--
+		$('.prd_caption input[type=\'text\'], .prd_caption input[type=\'hidden\'], .prd_caption input[type=\'radio\'], .prd_caption input[type=\'checkbox\'], .prd_caption select, .prd_caption textarea, .prd_caption input[name=\'quantity\']').on('change', function() {
+			var parentid = $(this).closest('div.prd_caption').attr('id');
+
+			var pid = parentid.substring(parentid.indexOf('product') +7);
+				$.ajax({
+					type: 'POST',
+					url: 'index.php?route=product/addoption/index',
+					data: $('#'+parentid+' input[type=\'text\'], #'+parentid+' input[type=\'hidden\'], #'+parentid+' input[type=\'radio\']:checked, #'+parentid+' input[type=\'checkbox\']:checked, #'+parentid+' select, #'+parentid+' textarea'),
+					dataType: 'json',
+						beforeSend: function() {
+							// you can add something useful here
+						},
+						complete: function() {
+							// you can add something useful here
+						},
+						success: function(json) {
+						if (json.success) {
+							animation_on_change_price_with_options('#price_special'+pid, json.new_price.special);
+							animation_on_change_price_with_options('#price_tax'+pid, json.new_price.tax);
+							animation_on_change_price_with_options('#price_old'+pid, json.new_price.price);
+						}
+					},
+					error: function(error) {
+						//console.log(error);
+					}
+				});
+			});
+			
+			var animation_on_change_price_with_options = function(selector_class_or_id, new_html_content) {
+				$(selector_class_or_id).fadeOut(150, function() {
+					$(this).html(new_html_content).fadeIn(50);
+				});
+			}
+//--></script>
+	<?php } ?>]]></add>
+      </operation>      
+</file>
+    
+<file path="catalog/view/theme/*/template/product/product.tpl">        
+      <operation>
+        <search index="1"><![CDATA[<?php echo $price; ?>]]></search>
+        <add position="replace"><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="price_old"><?php echo $price; ?></span>
+			<?php } else { ?>
+				<?php echo $price; ?>
+			<?php } ?>]]></add>
+      </operation>
+
+      <operation>
+        <search><![CDATA[<span style="text-decoration: line-through;"><?php echo $price; ?></span>]]></search>
+        <add position="replace"><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="price_old" style="text-decoration: line-through;"><?php echo $price; ?></span>
+			<?php } else { ?>
+			<span style="text-decoration: line-through;"><?php echo $price; ?></span>
+			<?php } ?>]]></add>
+      </operation>
+
+      <operation>
+        <search><![CDATA[<?php echo $special; ?>]]></search>
+        <add position="replace"><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="price_special"><?php echo $special; ?></span>
+			<?php } else { ?>
+				<?php echo $special; ?>
+			<?php } ?>]]></add>
+      </operation>
+
+      <operation>
+        <search><![CDATA[<?php echo $tax; ?>]]></search>
+        <add position="replace"><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="price_tax"><?php echo $tax; ?></span>
+			<?php } else { ?>
+				<?php echo $tax; ?>
+			<?php } ?>]]></add>
+      </operation>
+
+      <operation>
+        <search><![CDATA[<?php echo $footer; ?>]]></search>
+        <add position="before"><![CDATA[<?php if($addoption_status==1) { ?>
+			<script type="text/javascript" src="index.php?route=product/addoption/js&product_id=<?php echo $product_id; ?>"></script>
+        <?php } ?>]]></add>
+      </operation>
+</file>
+</modification>

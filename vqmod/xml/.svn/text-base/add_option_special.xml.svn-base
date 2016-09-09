@@ -1,0 +1,754 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--/*
+ * @support
+ * http://www.opensourcetechnologies.com/contactus.html
+ * sales@opensourcetechnologies.com
+* */-->
+<modification>
+   <name><![CDATA[Add To cart Option on Special Products Module]]></name>
+    <version><![CDATA[1.0]]></version>
+    <author><![CDATA[OST]]></author>
+    <link><![CDATA[http://www.opensourcetechnologies.com/]]></link>
+    <code>addtocartoptionscategory</code>  
+
+    <file path="catalog/language/english/product/special.php">
+    <operation>
+			<search><![CDATA[$_['text_limit']        = 'Show:';]]></search>
+			<add position="after"><![CDATA[$_['text_select']              = 'Select';
+			$_['text_option']              = 'Available Options';
+			$_['text_loading']              = 'Loading';
+			$_['button_upload']              = 'Upload';]]></add>
+	</operation>
+	</file>
+	   
+    <file path="catalog/controller/product/special.php">
+		<operation>
+			<search><![CDATA[$data['button_grid'] = $this->language->get('button_grid');]]></search>
+			<add position="after"><![CDATA[$data['addoption_status'] = $this->config->get('addoption_status');
+			$data['text_select'] = $this->language->get('text_select');	
+			$data['text_option'] = $this->language->get('text_option');
+			$data['text_loading'] = $this->language->get('text_loading');
+			$data['button_upload'] = $this->language->get('button_upload');	
+			$this->document->addScript('catalog/view/javascript/jquery/magnific/jquery.magnific-popup.min.js');
+			$this->document->addStyle('catalog/view/javascript/jquery/magnific/magnific-popup.css');
+			$this->document->addScript('catalog/view/javascript/jquery/datetimepicker/moment.js');
+			$this->document->addScript('catalog/view/javascript/jquery/datetimepicker/bootstrap-datetimepicker.min.js');
+			$this->document->addStyle('catalog/view/javascript/jquery/datetimepicker/bootstrap-datetimepicker.min.css');
+			]]></add>
+		</operation>
+
+		<operation>
+			<search position="before"><![CDATA[if ($result['image']) {]]></search>
+			<add><![CDATA[/*Starting product option*/
+					$options=array();
+					foreach ($this->model_catalog_product->getProductOptions($result['product_id']) as $option) {
+					$product_option_value_data = array();
+
+					foreach ($option['product_option_value'] as $option_value) {
+						if (!$option_value['subtract'] || ($option_value['quantity'] > 0)) {
+							if ((($this->config->get('config_customer_price') && $this->customer->isLogged()) || !$this->config->get('config_customer_price')) && (float)$option_value['price']) {
+								$price = $this->currency->format($this->tax->calculate($option_value['price'], $result['tax_class_id'], $this->config->get('config_tax') ? 'P' : false));
+							} else {
+								$price = false;
+							}
+
+							$product_option_value_data[] = array(
+								'product_option_value_id' => $option_value['product_option_value_id'],
+								'option_value_id'         => $option_value['option_value_id'],
+								'name'                    => $option_value['name'],
+								'image'                   => $this->model_tool_image->resize($option_value['image'], 50, 50),
+								'price'                   => $price,
+								'price_prefix'            => $option_value['price_prefix']
+							);
+						}
+					}
+
+						$options[] = array(
+							'product_option_id'    => $option['product_option_id'],
+							'product_option_value' => $product_option_value_data,
+							'option_id'            => $option['option_id'],
+							'name'                 => $option['name'],
+							'type'                 => $option['type'],
+							'value'                => $option['value'],
+							'required'             => $option['required']
+						);
+					}
+					/* Ending product option*/]]></add>
+		</operation>
+		<operation>
+			<search position="after"><![CDATA['rating'      => $result['rating'],]]></search>
+			<add><![CDATA[	'options'	  => $options,	]]></add>
+		</operation>				
+	</file>
+
+
+	<file path="catalog/view/theme/*/template/product/special.tpl">
+		
+      <operation>
+        <search position="replace"><![CDATA[<?php echo $product['price']; ?>]]></search>
+        <add><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="sp_price_old<?php echo $product['product_id']; ?>"><?php echo $product['price']; ?></span>
+			<?php } else { ?>
+				<?php echo $product['price']; ?>
+			<?php } ?>]]></add>
+      </operation>
+
+      <operation>
+        <search position="replace"><![CDATA[<?php echo $product['special']; ?>]]></search>
+        <add><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="sp_price_special<?php echo $product['product_id']; ?>"><?php echo $product['special']; ?></span>
+			<?php } else { ?>
+				<?php echo $product['special']; ?>
+			<?php } ?>]]></add>
+      </operation>
+
+      <operation>
+        <search position="replace"><![CDATA[<?php echo $product['tax']; ?>]]></search>
+        <add><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="sp_price_tax<?php echo $product['product_id']; ?>"><?php echo $product['tax']; ?></span>
+			<?php } else { ?>
+				<?php echo $product['tax']; ?>
+			<?php } ?>]]></add>
+      </operation>
+      		
+	<operation>
+		<search><![CDATA[<div class="product-layout product-list col-xs-12">]]></search>
+		<add position="replace"><![CDATA[<?php if($addoption_status==1) { ?>
+			<div class="product-layout product-list col-xs-12" id="sp_categoryproduct<?php echo $product['product_id'];?>">
+			<?php } else { ?>
+				<div class="product-layout product-list col-xs-12">
+			<?php } ?>]]></add>
+	</operation>
+	
+	<operation>
+			<search position="before" offset="1"><![CDATA[<div class="button-group">]]></search>
+			<add><![CDATA[<?php if($addoption_status==1) { ?>
+			<div class="sp_prd_caption" id="sp_product<?php echo $product['product_id']; ?>">
+			<?php if ($product['options']) { ?>
+           <?php foreach ($product['options'] as $option) {?>
+
+            <?php if ($option['type'] == 'select') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <select name="option[<?php echo $option['product_option_id']; ?>]" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control">
+                <option value=""><?php echo $text_select; ?></option>
+                <?php foreach ($option['product_option_value'] as $option_value) { ?>
+                <option value="<?php echo $option_value['product_option_value_id']; ?>"><?php echo $option_value['name']; ?>
+                <?php if ($option_value['price']) { ?>
+                (<?php echo $option_value['price_prefix']; ?><?php echo $option_value['price']; ?>)
+                <?php } ?>
+                </option>
+                <?php } ?>
+              </select>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'radio') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label"><?php echo $option['name']; ?></label>
+              <div id="input-option<?php echo $option['product_option_id']; ?>">
+                <?php foreach ($option['product_option_value'] as $option_value) { ?>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option_value['product_option_value_id']; ?>" />
+                    <?php echo $option_value['name']; ?>
+                    <?php if ($option_value['price']) { ?>
+                    (<?php echo $option_value['price_prefix']; ?><?php echo $option_value['price']; ?>)
+                    <?php } ?>
+                  </label>
+                </div>
+                <?php } ?>
+              </div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'checkbox') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label"><?php echo $option['name']; ?></label>
+              <div id="input-option<?php echo $option['product_option_id']; ?>">
+                <?php foreach ($option['product_option_value'] as $option_value) { ?>
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" name="option[<?php echo $option['product_option_id']; ?>][]" value="<?php echo $option_value['product_option_value_id']; ?>" />
+                    <?php echo $option_value['name']; ?>
+                    <?php if ($option_value['price']) { ?>
+                    (<?php echo $option_value['price_prefix']; ?><?php echo $option_value['price']; ?>)
+                    <?php } ?>
+                  </label>
+                </div>
+                <?php } ?>
+              </div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'image') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label"><?php echo $option['name']; ?></label>
+              <div id="input-option<?php echo $option['product_option_id']; ?>">
+                <?php foreach ($option['product_option_value'] as $option_value) { ?>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option_value['product_option_value_id']; ?>" />
+                    <img src="<?php echo $option_value['image']; ?>" alt="<?php echo $option_value['name'] . ($option_value['price'] ? ' ' . $option_value['price_prefix'] . $option_value['price'] : ''); ?>" class="img-thumbnail" /> <?php echo $option_value['name']; ?>
+                    <?php if ($option_value['price']) { ?>
+                    (<?php echo $option_value['price_prefix']; ?><?php echo $option_value['price']; ?>)
+                    <?php } ?>
+                  </label>
+                </div>
+                <?php } ?>
+              </div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'text') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <input type="text" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option['value']; ?>" placeholder="<?php echo $option['name']; ?>" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control" />
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'textarea') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <textarea name="option[<?php echo $option['product_option_id']; ?>]" rows="5" placeholder="<?php echo $option['name']; ?>" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control"><?php echo $option['value']; ?></textarea>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'file') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label"><?php echo $option['name']; ?></label>
+              <button type="button" id="button-upload<?php echo $option['product_option_id']; ?>" data-loading-text="<?php echo $text_loading; ?>" class="btn btn-default btn-block"><i class="fa fa-upload"></i> <?php echo $button_upload; ?></button>
+              <input type="hidden" name="option[<?php echo $option['product_option_id']; ?>]" value="" id="input-option<?php echo $option['product_option_id']; ?>" />
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'date') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <div class="input-group date">
+                <input type="text" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option['value']; ?>" data-date-format="YYYY-MM-DD" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control" />
+                <span class="input-group-btn">
+                <button class="btn btn-default" type="button"><i class="fa fa-calendar"></i></button>
+                </span></div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'datetime') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <div class="input-group datetime">
+                <input type="text" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option['value']; ?>" data-date-format="YYYY-MM-DD HH:mm" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control" />
+                <span class="input-group-btn">
+                <button type="button" class="btn btn-default"><i class="fa fa-calendar"></i></button>
+                </span></div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'time') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <div class="input-group time">
+                <input type="text" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option['value']; ?>" data-date-format="HH:mm" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control" />
+                <span class="input-group-btn">
+                <button type="button" class="btn btn-default"><i class="fa fa-calendar"></i></button>
+                </span></div>
+            </div>
+            <?php } ?>
+          
+           
+            <?php } ?>
+            <?php } ?>
+            <input type="hidden" value="<?php echo $product['product_id']; ?>" id="product_id" name="product_id" >
+            </div>
+            <?php } ?>]]></add>
+	</operation>	
+	
+	<operation>
+		<search><![CDATA[<button type="button" onclick="cart.add('<?php echo $product['product_id']; ?>', '<?php echo $product['minimum']; ?>');"><i class="fa fa-shopping-cart"></i> <span class="hidden-xs hidden-sm hidden-md"><?php echo $button_cart; ?></span></button>]]></search>
+		<add position="replace"><![CDATA[<?php if($addoption_status==1) { ?>
+		<input type="hidden" name="quantity" value="<?php echo $product['minimum']; ?>" size="2" id="input-quantity" class="form-control" />
+        <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>" />
+        <button id="sp_categorycart<?php echo $product['product_id']; ?>" type="button" onclick="sp_categorycart<?php echo $product['product_id']; ?>.add('<?php echo $product['product_id']; ?>', '<?php echo $product['minimum']; ?>');"><i class="fa fa-shopping-cart"></i> <span class="hidden-xs hidden-sm hidden-md"><?php echo $button_cart; ?></span></button>
+        <?php } else { ?>
+        <button type="button" onclick="cart.add('<?php echo $product['product_id']; ?>', '<?php echo $product['minimum']; ?>');"><i class="fa fa-shopping-cart"></i> <span class="hidden-xs hidden-sm hidden-md"><?php echo $button_cart; ?></span></button>
+        <?php } ?>]]></add>   
+    </operation>
+    
+       <operation>
+		<search><![CDATA[<button type="button" data-toggle="tooltip" title="<?php echo $button_compare; ?>" onclick="compare.add('<?php echo $product['product_id']; ?>');"><i class="fa fa-exchange"></i></button>]]></search>
+		<add position="after" offset="6"><![CDATA[<?php if($addoption_status==1) { ?>
+<script type="text/javascript"><!--
+// Cart add remove functions
+var sp_categorycart<?php echo $product['product_id']; ?> = {
+	'add': function(product_id, quantity) { 
+		$.ajax({
+		url: 'index.php?route=checkout/cart/add',
+		type: 'post',
+		data: $('#sp_categoryproduct<?php echo $product['product_id']; ?>  input[type=\'text\'], #sp_categoryproduct<?php echo $product['product_id']; ?> input[type=\'hidden\'], #sp_categoryproduct<?php echo $product['product_id']; ?> input[type=\'radio\']:checked, #sp_categoryproduct<?php echo $product['product_id']; ?> input[type=\'checkbox\']:checked, #sp_categoryproduct<?php echo $product['product_id']; ?> select, #sp_categoryproduct<?php echo $product['product_id']; ?> textarea'),
+		dataType: 'json',
+		beforeSend: function() {
+			$('#sp_categorycart<?php echo $product['product_id']; ?>').button('loading');
+		},
+		complete: function() {
+			$('#sp_categorycart<?php echo $product['product_id']; ?>').button('reset');
+		},
+		success: function(json) {
+			
+			$('.alert, .text-danger').remove();
+			$('.form-group').removeClass('has-error');
+			if (json['error']) { 
+				if (json['error']['option']) {
+					for (i in json['error']['option']) {
+						var element = $('#sp_categoryproduct<?php echo $product['product_id']; ?> #input-option' + i.replace('_', '-'));
+
+						if (element.parent().hasClass('input-group')) {
+							element.parent().after('<div class="text-danger">' + json['error']['option'][i] + '</div>');
+						} else {
+							element.after('<div class="text-danger">' + json['error']['option'][i] + '</div>');
+						}
+					}
+				}
+
+				if (json['error']['recurring']) {
+					$('#sp_categoryproduct<?php echo $product['product_id']; ?> select[name=\'recurring_id\']').after('<div class="text-danger">' + json['error']['recurring'] + '</div>');
+				}
+
+				// Highlight any found errors
+				$('.text-danger').parent().addClass('has-error');
+			}
+			if (json['success']) { 
+				$('#content').parent().before('<div class="alert alert-success">' + json['success'] + '<button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+
+				$('#cart > button').html('<i class="fa fa-shopping-cart"></i> ' + json['total']);
+
+				$('html, body').animate({ scrollTop: 0 }, 'slow');
+
+				$('#cart > ul').load('index.php?route=common/cart/info ul li');
+			}
+		}
+	});
+	}
+}
+//--></script>
+ 
+<script type="text/javascript">
+	$('.date').datetimepicker({
+			pickTime: false
+	});
+
+	$('.datetime').datetimepicker({
+			pickDate: true,
+			pickTime: true
+	});
+
+	$('.time').datetimepicker({
+			pickDate: false
+	});
+</script>
+<script type="text/javascript"><!--
+
+	
+		$('.sp_prd_caption input[type=\'text\'], .sp_prd_caption input[type=\'hidden\'], .sp_prd_caption input[type=\'radio\'], .sp_prd_caption input[type=\'checkbox\'], .sp_prd_caption select, .sp_prd_caption textarea, .sp_prd_caption input[name=\'quantity\']').on('change', function() {
+			var parentid = $(this).closest('div.sp_prd_caption').attr('id');
+
+			var pid = parentid.substring(parentid.indexOf('sp_product') +10);
+				$.ajax({
+					type: 'POST',
+					url: 'index.php?route=product/addoption/index',
+					data: $('#'+parentid+' input[type=\'text\'], #'+parentid+' input[type=\'hidden\'], #'+parentid+' input[type=\'radio\']:checked, #'+parentid+' input[type=\'checkbox\']:checked, #'+parentid+' select, #'+parentid+' textarea'),
+					dataType: 'json',
+						beforeSend: function() {
+							// you can add smth useful here
+						},
+						complete: function() {
+							// you can add smth useful here
+						},
+						success: function(json) {
+						if (json.success) {
+							animation_on_change_price_with_options('#sp_price_special'+pid, json.new_price.special);
+							animation_on_change_price_with_options('#sp_price_tax'+pid, json.new_price.tax);
+							animation_on_change_price_with_options('#sp_price_old'+pid, json.new_price.price);
+						}
+					},
+					error: function(error) {
+						//console.log(error);
+					}
+				});
+			});
+			
+			var animation_on_change_price_with_options = function(selector_class_or_id, new_html_content) {
+				$(selector_class_or_id).fadeOut(150, function() {
+					$(this).html(new_html_content).fadeIn(50);
+				});
+			}
+
+//--></script>
+<?php } ?> ]]></add>   
+		</operation>
+    	
+    </file>
+
+<!-- Special Products Language File for Module -->	
+
+    <file path="catalog/language/english/module/special.php">
+    <operation>
+			<search><![CDATA[$_['text_tax']      = 'Ex Tax:';]]></search>
+			<add position="after"><![CDATA[$_['text_select']              = 'Select';
+			$_['text_option']              = 'Available Options';
+			$_['text_loading']              = 'Loading';
+			$_['button_upload']              = 'Upload';]]></add>
+	</operation>
+	</file>
+
+<!-- Special Products Controller for Module -->	
+
+    <file path="catalog/controller/module/special.php">
+		<operation>
+			<search><![CDATA[$data['button_compare'] = $this->language->get('button_compare');]]></search>
+			<add position="after"><![CDATA[$data['addoption_status'] = $this->config->get('addoption_status');
+			$data['text_select'] = $this->language->get('text_select');	
+			$data['text_option'] = $this->language->get('text_option');
+			$data['text_loading'] = $this->language->get('text_loading');
+			$data['button_upload'] = $this->language->get('button_upload');	
+			$this->document->addScript('catalog/view/javascript/jquery/magnific/jquery.magnific-popup.min.js');
+			$this->document->addStyle('catalog/view/javascript/jquery/magnific/magnific-popup.css');
+			$this->document->addScript('catalog/view/javascript/jquery/datetimepicker/moment.js');
+			$this->document->addScript('catalog/view/javascript/jquery/datetimepicker/bootstrap-datetimepicker.min.js');
+			$this->document->addStyle('catalog/view/javascript/jquery/datetimepicker/bootstrap-datetimepicker.min.css');
+			]]></add>
+		</operation>
+
+		<operation>
+			<search position="before"><![CDATA[if ($result['image']) {]]></search>
+			<add><![CDATA[/*Starting product option*/
+					$options=array();
+					foreach ($this->model_catalog_product->getProductOptions($result['product_id']) as $option) {
+					$product_option_value_data = array();
+
+					foreach ($option['product_option_value'] as $option_value) {
+						if (!$option_value['subtract'] || ($option_value['quantity'] > 0)) {
+							if ((($this->config->get('config_customer_price') && $this->customer->isLogged()) || !$this->config->get('config_customer_price')) && (float)$option_value['price']) {
+								$price = $this->currency->format($this->tax->calculate($option_value['price'], $result['tax_class_id'], $this->config->get('config_tax') ? 'P' : false));
+							} else {
+								$price = false;
+							}
+
+							$product_option_value_data[] = array(
+								'product_option_value_id' => $option_value['product_option_value_id'],
+								'option_value_id'         => $option_value['option_value_id'],
+								'name'                    => $option_value['name'],
+								'image'                   => $this->model_tool_image->resize($option_value['image'], 50, 50),
+								'price'                   => $price,
+								'price_prefix'            => $option_value['price_prefix']
+							);
+						}
+					}
+
+						$options[] = array(
+							'product_option_id'    => $option['product_option_id'],
+							'product_option_value' => $product_option_value_data,
+							'option_id'            => $option['option_id'],
+							'name'                 => $option['name'],
+							'type'                 => $option['type'],
+							'value'                => $option['value'],
+							'required'             => $option['required']
+						);
+					}
+					/* Ending product option*/]]></add>
+		</operation>
+		<operation>
+			<search position="after"><![CDATA['rating'      => $rating,]]></search>
+			<add><![CDATA[	'options'	  => $options,	]]></add>
+		</operation>				
+	</file>
+<!-- Special Products TPL for Module -->	
+	<file path="catalog/view/theme/*/template/module/special.tpl">
+		
+      <operation>
+        <search position="replace"><![CDATA[<?php echo $product['price']; ?>]]></search>
+        <add><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="sp_price_old<?php echo $product['product_id']; ?>"><?php echo $product['price']; ?></span>
+			<?php } else { ?>
+				<?php echo $product['price']; ?>
+			<?php } ?>]]></add>
+      </operation>
+
+      <operation>
+        <search position="replace"><![CDATA[<?php echo $product['special']; ?>]]></search>
+        <add><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="sp_price_special<?php echo $product['product_id']; ?>"><?php echo $product['special']; ?></span>
+			<?php } else { ?>
+				<?php echo $product['special']; ?>
+			<?php } ?>]]></add>
+      </operation>
+
+      <operation>
+        <search position="replace"><![CDATA[<?php echo $product['tax']; ?>]]></search>
+        <add><![CDATA[<?php if($addoption_status==1) { ?>
+			<span id="sp_price_tax<?php echo $product['product_id']; ?>"><?php echo $product['tax']; ?></span>
+			<?php } else { ?>
+				<?php echo $product['tax']; ?>
+			<?php } ?>]]></add>
+      </operation>
+      		
+	<operation>
+		<search><![CDATA[<div class="product-layout col-lg-3 col-md-3 col-sm-6 col-xs-12">]]></search>
+		<add position="replace"><![CDATA[<?php if($addoption_status==1) { ?>
+			<div class="product-layout col-lg-3 col-md-3 col-sm-6 col-xs-12" id="sp_categoryproduct<?php echo $product['product_id'];?>">
+			<?php } else { ?>
+				<div class="product-layout col-lg-3 col-md-3 col-sm-6 col-xs-12">
+			<?php } ?>]]>
+			</add>
+	</operation>
+	
+	<operation>
+			<search position="before" offset="1"><![CDATA[<div class="button-group">]]></search>
+			<add><![CDATA[<?php if($addoption_status==1) { ?>
+			<div class="sp_prd_caption" id="sp_product<?php echo $product['product_id']; ?>">
+			<?php if ($product['options']) { ?>
+           <?php foreach ($product['options'] as $option) {?>        
+
+            <?php if ($option['type'] == 'select') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <select name="option[<?php echo $option['product_option_id']; ?>]" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control">
+                <option value=""><?php echo $text_select; ?></option>
+                <?php foreach ($option['product_option_value'] as $option_value) { ?>
+                <option value="<?php echo $option_value['product_option_value_id']; ?>"><?php echo $option_value['name']; ?>
+                <?php if ($option_value['price']) { ?>
+                (<?php echo $option_value['price_prefix']; ?><?php echo $option_value['price']; ?>)
+                <?php } ?>
+                </option>
+                <?php } ?>
+              </select>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'radio') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label"><?php echo $option['name']; ?></label>
+              <div id="input-option<?php echo $option['product_option_id']; ?>">
+                <?php foreach ($option['product_option_value'] as $option_value) { ?>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option_value['product_option_value_id']; ?>" />
+                    <?php echo $option_value['name']; ?>
+                    <?php if ($option_value['price']) { ?>
+                    (<?php echo $option_value['price_prefix']; ?><?php echo $option_value['price']; ?>)
+                    <?php } ?>
+                  </label>
+                </div>
+                <?php } ?>
+              </div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'checkbox') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label"><?php echo $option['name']; ?></label>
+              <div id="input-option<?php echo $option['product_option_id']; ?>">
+                <?php foreach ($option['product_option_value'] as $option_value) { ?>
+                <div class="checkbox">
+                  <label>
+                    <input type="checkbox" name="option[<?php echo $option['product_option_id']; ?>][]" value="<?php echo $option_value['product_option_value_id']; ?>" />
+                    <?php echo $option_value['name']; ?>
+                    <?php if ($option_value['price']) { ?>
+                    (<?php echo $option_value['price_prefix']; ?><?php echo $option_value['price']; ?>)
+                    <?php } ?>
+                  </label>
+                </div>
+                <?php } ?>
+              </div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'image') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label"><?php echo $option['name']; ?></label>
+              <div id="input-option<?php echo $option['product_option_id']; ?>">
+                <?php foreach ($option['product_option_value'] as $option_value) { ?>
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option_value['product_option_value_id']; ?>" />
+                    <img src="<?php echo $option_value['image']; ?>" alt="<?php echo $option_value['name'] . ($option_value['price'] ? ' ' . $option_value['price_prefix'] . $option_value['price'] : ''); ?>" class="img-thumbnail" /> <?php echo $option_value['name']; ?>
+                    <?php if ($option_value['price']) { ?>
+                    (<?php echo $option_value['price_prefix']; ?><?php echo $option_value['price']; ?>)
+                    <?php } ?>
+                  </label>
+                </div>
+                <?php } ?>
+              </div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'text') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <input type="text" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option['value']; ?>" placeholder="<?php echo $option['name']; ?>" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control" />
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'textarea') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <textarea name="option[<?php echo $option['product_option_id']; ?>]" rows="5" placeholder="<?php echo $option['name']; ?>" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control"><?php echo $option['value']; ?></textarea>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'file') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label"><?php echo $option['name']; ?></label>
+              <button type="button" id="button-upload<?php echo $option['product_option_id']; ?>" data-loading-text="<?php echo $text_loading; ?>" class="btn btn-default btn-block"><i class="fa fa-upload"></i> <?php echo $button_upload; ?></button>
+              <input type="hidden" name="option[<?php echo $option['product_option_id']; ?>]" value="" id="input-option<?php echo $option['product_option_id']; ?>" />
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'date') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <div class="input-group date">
+                <input type="text" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option['value']; ?>" data-date-format="YYYY-MM-DD" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control" />
+                <span class="input-group-btn">
+                <button class="btn btn-default" type="button"><i class="fa fa-calendar"></i></button>
+                </span></div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'datetime') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <div class="input-group datetime">
+                <input type="text" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option['value']; ?>" data-date-format="YYYY-MM-DD HH:mm" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control" />
+                <span class="input-group-btn">
+                <button type="button" class="btn btn-default"><i class="fa fa-calendar"></i></button>
+                </span></div>
+            </div>
+            <?php } ?>
+            <?php if ($option['type'] == 'time') { ?>
+            <div class="form-group<?php echo ($option['required'] ? ' required' : ''); ?>">
+              <label class="control-label" for="input-option<?php echo $option['product_option_id']; ?>"><?php echo $option['name']; ?></label>
+              <div class="input-group time">
+                <input type="text" name="option[<?php echo $option['product_option_id']; ?>]" value="<?php echo $option['value']; ?>" data-date-format="HH:mm" id="input-option<?php echo $option['product_option_id']; ?>" class="form-control" />
+                <span class="input-group-btn">
+                <button type="button" class="btn btn-default"><i class="fa fa-calendar"></i></button>
+                </span></div>
+            </div>
+            <?php } ?>
+          
+           
+            <?php } ?>
+            <?php } ?>
+            <input type="hidden" value="<?php echo $product['product_id']; ?>" id="product_id" name="product_id" >
+            </div>
+            <?php } ?>]]></add>
+	</operation>	
+	
+	<operation>
+		<search><![CDATA[<button type="button" onclick="cart.add('<?php echo $product['product_id']; ?>');"><i class="fa fa-shopping-cart"></i> <span class="hidden-xs hidden-sm hidden-md"><?php echo $button_cart; ?></span></button>]]></search>
+		<add position="replace"><![CDATA[<?php if($addoption_status==1) { ?>
+		<input type="hidden" name="quantity" value="<?php echo $product['minimum']; ?>" size="2" id="input-quantity" class="form-control" />
+        <input type="hidden" name="product_id" value="<?php echo $product['product_id']; ?>" />
+        <button id="sp_categorycart<?php echo $product['product_id']; ?>" type="button" onclick="sp_categorycart<?php echo $product['product_id']; ?>.add('<?php echo $product['product_id']; ?>', '<?php echo $product['minimum']; ?>');"><i class="fa fa-shopping-cart"></i> <span class="hidden-xs hidden-sm hidden-md"><?php echo $button_cart; ?></span></button>
+        <?php } else { ?>
+        <button type="button" onclick="cart.add('<?php echo $product['product_id']; ?>');"><i class="fa fa-shopping-cart"></i> <span class="hidden-xs hidden-sm hidden-md"><?php echo $button_cart; ?></span></button>
+        <?php } ?>]]>
+		</add>   
+    </operation>
+    
+       <operation>
+		<search><![CDATA[<button type="button" data-toggle="tooltip" title="<?php echo $button_compare; ?>" onclick="compare.add('<?php echo $product['product_id']; ?>');"><i class="fa fa-exchange"></i></button>]]></search>
+		<add position="after" offset="6"><![CDATA[<?php if($addoption_status==1) { ?>
+<script type="text/javascript"><!--
+// Cart add remove functions
+var sp_categorycart<?php echo $product['product_id']; ?> = {
+	'add': function(product_id, quantity) { 
+		$.ajax({
+		url: 'index.php?route=checkout/cart/add',
+		type: 'post',
+		data: $('#sp_categoryproduct<?php echo $product['product_id']; ?>  input[type=\'text\'], #sp_categoryproduct<?php echo $product['product_id']; ?> input[type=\'hidden\'], #sp_categoryproduct<?php echo $product['product_id']; ?> input[type=\'radio\']:checked, #sp_categoryproduct<?php echo $product['product_id']; ?> input[type=\'checkbox\']:checked, #sp_categoryproduct<?php echo $product['product_id']; ?> select, #sp_categoryproduct<?php echo $product['product_id']; ?> textarea'),
+		dataType: 'json',
+		beforeSend: function() {
+			$('#sp_categorycart<?php echo $product['product_id']; ?>').button('loading');
+		},
+		complete: function() {
+			$('#sp_categorycart<?php echo $product['product_id']; ?>').button('reset');
+		},
+		success: function(json) {
+			
+			$('.alert, .text-danger').remove();
+			$('.form-group').removeClass('has-error');
+			if (json['error']) { 
+				if (json['error']['option']) {
+					for (i in json['error']['option']) {
+						var element = $('#sp_categoryproduct<?php echo $product['product_id']; ?> #input-option' + i.replace('_', '-'));
+
+						if (element.parent().hasClass('input-group')) {
+							element.parent().after('<div class="text-danger">' + json['error']['option'][i] + '</div>');
+						} else {
+							element.after('<div class="text-danger">' + json['error']['option'][i] + '</div>');
+						}
+					}
+				}
+
+				if (json['error']['recurring']) {
+					$('#sp_categoryproduct<?php echo $product['product_id']; ?> select[name=\'recurring_id\']').after('<div class="text-danger">' + json['error']['recurring'] + '</div>');
+				}
+
+				// Highlight any found errors
+				$('.text-danger').parent().addClass('has-error');
+			}
+			if (json['success']) { 
+				$('#content').parent().before('<div class="alert alert-success">' + json['success'] + '<button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+
+				$('#cart > button').html('<i class="fa fa-shopping-cart"></i> ' + json['total']);
+
+				$('html, body').animate({ scrollTop: 0 }, 'slow');
+
+				$('#cart > ul').load('index.php?route=common/cart/info ul li');
+			}
+		}
+	});
+	}
+}
+//--></script>
+ 
+<script type="text/javascript">
+	$('.date').datetimepicker({
+			pickTime: false
+	});
+
+	$('.datetime').datetimepicker({
+			pickDate: true,
+			pickTime: true
+	});
+
+	$('.time').datetimepicker({
+			pickDate: false
+	});
+</script>
+<script type="text/javascript"><!--
+
+	
+		$('.sp_prd_caption input[type=\'text\'], .sp_prd_caption input[type=\'hidden\'], .sp_prd_caption input[type=\'radio\'], .sp_prd_caption input[type=\'checkbox\'], .sp_prd_caption select, .sp_prd_caption textarea, .sp_prd_caption input[name=\'quantity\']').on('change', function() {
+			var parentid = $(this).closest('div.sp_prd_caption').attr('id');
+
+			var pid = parentid.substring(parentid.indexOf('sp_product') +10);
+				$.ajax({
+					type: 'POST',
+					url: 'index.php?route=product/addoption/index',
+					data: $('#'+parentid+' input[type=\'text\'], #'+parentid+' input[type=\'hidden\'], #'+parentid+' input[type=\'radio\']:checked, #'+parentid+' input[type=\'checkbox\']:checked, #'+parentid+' select, #'+parentid+' textarea'),
+					dataType: 'json',
+						beforeSend: function() {
+							// you can add smth useful here
+						},
+						complete: function() {
+							// you can add smth useful here
+						},
+						success: function(json) {
+						if (json.success) {
+							animation_on_change_price_with_options('#sp_price_special'+pid, json.new_price.special);
+							animation_on_change_price_with_options('#sp_price_tax'+pid, json.new_price.tax);
+							animation_on_change_price_with_options('#sp_price_old'+pid, json.new_price.price);
+						}
+					},
+					error: function(error) {
+						//console.log(error);
+					}
+				});
+			});
+			
+			var animation_on_change_price_with_options = function(selector_class_or_id, new_html_content) {
+				$(selector_class_or_id).fadeOut(150, function() {
+					$(this).html(new_html_content).fadeIn(50);
+				});
+			}
+
+//--></script>
+<?php } ?>]]></add>   
+		</operation>
+    	
+    </file>
+</modification>

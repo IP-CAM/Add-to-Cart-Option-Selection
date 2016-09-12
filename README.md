@@ -2,7 +2,7 @@ Supported OpenCart Versions:
 ================
 2.x versions
 
-Demo <a href=http://opencart.ostwork.com/opencart2.1/
+<a href=http://opencart.ostwork.com/opencart2.1/>Demo</a>
 
 Add Options for opencart is a well thought out and excellently made module that allows an admin to add product options on Category page also to direct add products in cart.
 

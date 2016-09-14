@@ -1,8 +1,4 @@
-<!--/*
- * @support
- * http://www.opensourcetechnologies.com/contactus.html
- * sales@opensourcetechnologies.com
-* */-->
+
 Supported OpenCart Versions:
 ================
 2.x versions
